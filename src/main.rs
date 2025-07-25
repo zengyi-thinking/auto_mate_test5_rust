@@ -1,228 +1,286 @@
-//! Rust学习之旅 - 第6步：结构体
+//! Rust学习之旅 - 第8步：错误处理
 //! 
 //! 学习内容：
-//! - 结构体定义和实例化
-//! - 方法和关联函数
-//! - 结构体更新语法
-//! - 元组结构体和单元结构体
+//! - panic!宏和不可恢复错误
+//! - Result类型和可恢复错误
+//! - 错误传播和?操作符
+//! - 自定义错误类型
 
-// 定义学生结构体
+use std::fs::File;
+use std::io::{self, Read};
+use std::num::ParseIntError;
+
+// 自定义错误类型
+#[derive(Debug)]
+enum StudentError {
+    InvalidAge(String),
+    InvalidGrade(String),
+    NotFound(String),
+    IoError(io::Error),
+    ParseError(ParseIntError),
+}
+
+// 为自定义错误实现Display
+impl std::fmt::Display for StudentError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            StudentError::InvalidAge(msg) => write!(f, "年龄错误: {}", msg),
+            StudentError::InvalidGrade(msg) => write!(f, "成绩错误: {}", msg),
+            StudentError::NotFound(msg) => write!(f, "未找到: {}", msg),
+            StudentError::IoError(err) => write!(f, "IO错误: {}", err),
+            StudentError::ParseError(err) => write!(f, "解析错误: {}", err),
+        }
+    }
+}
+
+// 实现Error trait
+impl std::error::Error for StudentError {}
+
+// 从其他错误类型转换
+impl From<io::Error> for StudentError {
+    fn from(error: io::Error) -> Self {
+        StudentError::IoError(error)
+    }
+}
+
+impl From<ParseIntError> for StudentError {
+    fn from(error: ParseIntError) -> Self {
+        StudentError::ParseError(error)
+    }
+}
+
+type StudentResult<T> = Result<T, StudentError>;
+
 #[derive(Debug)]
 struct Student {
     name: String,
     age: u8,
     grade: f64,
-    is_active: bool,
 }
 
-// 定义课程结构体
-#[derive(Debug)]
-struct Course {
-    name: String,
-    credits: u8,
-    instructor: String,
+impl Student {
+    fn new(name: String, age: u8, grade: f64) -> StudentResult<Student> {
+        if age > 100 {
+            return Err(StudentError::InvalidAge(
+                format!("年龄 {} 超出合理范围", age)
+            ));
+        }
+        
+        if grade < 0.0 || grade > 100.0 {
+            return Err(StudentError::InvalidGrade(
+                format!("成绩 {} 不在0-100范围内", grade)
+            ));
+        }
+        
+        Ok(Student { name, age, grade })
+    }
 }
-
-// 元组结构体
-#[derive(Debug)]
-struct Point(i32, i32, i32);
-
-// 单元结构体
-#[derive(Debug)]
-struct Unit;
 
 fn main() {
-    println!("🦀 Rust学习之旅 - 第6步：结构体");
+    println!("🦀 Rust学习之旅 - 第8步：错误处理");
     println!("=".repeat(50));
     
-    // 1. 结构体基础
-    demonstrate_struct_basics();
+    // 1. panic和不可恢复错误
+    demonstrate_panic();
     
-    // 2. 方法和关联函数
-    demonstrate_methods();
+    // 2. Result和可恢复错误
+    demonstrate_result();
     
-    // 3. 结构体更新语法
-    demonstrate_struct_update();
+    // 3. 错误传播
+    demonstrate_error_propagation();
     
-    // 4. 特殊结构体类型
-    demonstrate_special_structs();
+    // 4. 自定义错误处理
+    demonstrate_custom_errors();
+    
+    // 5. 错误处理最佳实践
+    demonstrate_best_practices();
 }
 
-/// 演示结构体基础用法
-fn demonstrate_struct_basics() {
-    println!("\n🏗️ 1. 结构体基础");
+/// 演示panic和不可恢复错误
+fn demonstrate_panic() {
+    println!("\n💥 1. panic和不可恢复错误");
     
-    // 创建结构体实例
-    let student1 = Student {
-        name: String::from("张三"),
-        age: 20,
-        grade: 85.5,
-        is_active: true,
-    };
+    // 数组越界会panic
+    let numbers = vec![1, 2, 3];
+    println!("数组: {:?}", numbers);
     
-    println!("学生信息: {:?}", student1);
-    println!("姓名: {}", student1.name);
-    println!("年龄: {}", student1.age);
-    println!("成绩: {:.1}", student1.grade);
-    
-    // 可变结构体
-    let mut student2 = Student {
-        name: String::from("李四"),
-        age: 19,
-        grade: 78.0,
-        is_active: false,
-    };
-    
-    println!("\n修改前: {:?}", student2);
-    student2.grade = 82.5;
-    student2.is_active = true;
-    println!("修改后: {:?}", student2);
-    
-    // 使用函数创建结构体
-    let student3 = create_student(String::from("王五"), 21, 90.0);
-    println!("通过函数创建: {:?}", student3);
-}
-
-/// 创建学生的辅助函数
-fn create_student(name: String, age: u8, grade: f64) -> Student {
-    Student {
-        name,  // 字段初始化简写
-        age,
-        grade,
-        is_active: true,
+    // 安全访问
+    match numbers.get(5) {
+        Some(value) => println!("索引5的值: {}", value),
+        None => println!("索引5超出范围"),
     }
+    
+    // 手动panic（在实际代码中谨慎使用）
+    // panic!("这是一个手动panic!");
+    
+    println!("演示完成（跳过了实际panic调用）");
 }
 
-/// 演示方法和关联函数
-impl Student {
-    // 关联函数（类似静态方法）
-    fn new(name: String, age: u8) -> Student {
-        Student {
-            name,
-            age,
-            grade: 0.0,
-            is_active: true,
+/// 演示Result和可恢复错误
+fn demonstrate_result() {
+    println!("\n🔧 2. Result和可恢复错误");
+    
+    // 字符串解析
+    let number_strings = vec!["42", "abc", "123", "xyz", "789"];
+    
+    println!("解析数字:");
+    for s in number_strings {
+        match parse_number(s) {
+            Ok(num) => println!("  '{}' -> {}", s, num),
+            Err(e) => println!("  '{}' -> 错误: {}", s, e),
         }
     }
     
-    // 方法（需要self参数）
-    fn display_info(&self) {
-        println!("学生: {}, 年龄: {}, 成绩: {:.1}", 
-                 self.name, self.age, self.grade);
-    }
-    
-    fn is_passing(&self) -> bool {
-        self.grade >= 60.0
-    }
-    
-    fn update_grade(&mut self, new_grade: f64) {
-        self.grade = new_grade;
-        println!("{} 的成绩更新为: {:.1}", self.name, self.grade);
-    }
-    
-    fn get_grade_level(&self) -> &str {
-        match self.grade {
-            90.0..=100.0 => "优秀",
-            80.0..=89.9 => "良好",
-            70.0..=79.9 => "中等",
-            60.0..=69.9 => "及格",
-            _ => "不及格",
+    // 除法运算
+    let divisions = vec![(10, 2), (15, 3), (8, 0), (20, 4)];
+    println!("\n除法运算:");
+    for (a, b) in divisions {
+        match safe_divide(a, b) {
+            Ok(result) => println!("  {} ÷ {} = {}", a, b, result),
+            Err(msg) => println!("  {} ÷ {} -> 错误: {}", a, b, msg),
         }
     }
 }
 
-fn demonstrate_methods() {
-    println!("\n🔧 2. 方法和关联函数");
-    
-    // 使用关联函数创建实例
-    let mut student = Student::new(String::from("赵六"), 22);
-    student.display_info();
-    
-    // 调用方法
-    println!("是否及格: {}", student.is_passing());
-    
-    // 修改数据
-    student.update_grade(87.5);
-    student.display_info();
-    println!("等级: {}", student.get_grade_level());
-    println!("现在是否及格: {}", student.is_passing());
+fn parse_number(s: &str) -> Result<i32, ParseIntError> {
+    s.parse::<i32>()
 }
 
-/// 演示结构体更新语法
-fn demonstrate_struct_update() {
-    println!("\n🔄 3. 结构体更新语法");
-    
-    let student1 = Student {
-        name: String::from("原学生"),
-        age: 20,
-        grade: 85.0,
-        is_active: true,
-    };
-    
-    println!("原学生: {:?}", student1);
-    
-    // 使用结构体更新语法创建新实例
-    let student2 = Student {
-        name: String::from("新学生"),
-        grade: 92.0,
-        ..student1  // 其余字段从student1复制
-    };
-    
-    println!("新学生: {:?}", student2);
-    // 注意：student1的name被移动了，但age和is_active被复制了
-    // println!("{:?}", student1); // 这行会编译错误
-    
-    // 创建课程实例
-    let course1 = Course {
-        name: String::from("Rust编程"),
-        credits: 3,
-        instructor: String::from("张教授"),
-    };
-    
-    let course2 = Course {
-        instructor: String::from("李教授"),
-        ..course1
-    };
-    
-    println!("课程1: {:?}", course2);
-}
-
-/// 演示特殊结构体类型
-fn demonstrate_special_structs() {
-    println!("\n🎯 4. 特殊结构体类型");
-    
-    // 元组结构体
-    let origin = Point(0, 0, 0);
-    let point1 = Point(1, 2, 3);
-    
-    println!("原点: {:?}", origin);
-    println!("点1: {:?}", point1);
-    println!("点1的坐标: ({}, {}, {})", point1.0, point1.1, point1.2);
-    
-    // 单元结构体
-    let unit = Unit;
-    println!("单元结构体: {:?}", unit);
-    
-    // 计算两点距离
-    let distance = calculate_distance(&origin, &point1);
-    println!("两点距离: {:.2}", distance);
-}
-
-/// 为Point实现方法
-impl Point {
-    fn new(x: i32, y: i32, z: i32) -> Point {
-        Point(x, y, z)
-    }
-    
-    fn distance_from_origin(&self) -> f64 {
-        ((self.0.pow(2) + self.1.pow(2) + self.2.pow(2)) as f64).sqrt()
+fn safe_divide(a: i32, b: i32) -> Result<i32, String> {
+    if b == 0 {
+        Err("除数不能为零".to_string())
+    } else {
+        Ok(a / b)
     }
 }
 
-/// 计算两点间距离
-fn calculate_distance(p1: &Point, p2: &Point) -> f64 {
-    let dx = (p2.0 - p1.0) as f64;
-    let dy = (p2.1 - p1.1) as f64;
-    let dz = (p2.2 - p1.2) as f64;
-    (dx.powi(2) + dy.powi(2) + dz.powi(2)).sqrt()
+/// 演示错误传播
+fn demonstrate_error_propagation() {
+    println!("\n📤 3. 错误传播");
+    
+    // 使用?操作符传播错误
+    match read_and_parse_file() {
+        Ok(numbers) => {
+            println!("成功读取并解析文件:");
+            println!("  数字: {:?}", numbers);
+            println!("  总和: {}", numbers.iter().sum::<i32>());
+        }
+        Err(e) => println!("处理文件时出错: {}", e),
+    }
+    
+    // 链式错误处理
+    match process_student_data("25", "87.5") {
+        Ok(student) => println!("创建学生成功: {:?}", student),
+        Err(e) => println!("创建学生失败: {}", e),
+    }
+    
+    match process_student_data("abc", "87.5") {
+        Ok(student) => println!("创建学生成功: {:?}", student),
+        Err(e) => println!("创建学生失败: {}", e),
+    }
+}
+
+fn read_and_parse_file() -> Result<Vec<i32>, Box<dyn std::error::Error>> {
+    // 模拟文件内容
+    let content = "1\n2\n3\n4\n5";
+    
+    let mut numbers = Vec::new();
+    for line in content.lines() {
+        let number = line.parse::<i32>()?;  // ?操作符传播错误
+        numbers.push(number);
+    }
+    
+    Ok(numbers)
+}
+
+fn process_student_data(age_str: &str, grade_str: &str) -> StudentResult<Student> {
+    let age: u8 = age_str.parse()?;  // 自动转换ParseIntError
+    let grade: f64 = grade_str.parse().map_err(|_| {
+        StudentError::InvalidGrade("无法解析成绩".to_string())
+    })?;
+    
+    Student::new("测试学生".to_string(), age, grade)
+}
+
+/// 演示自定义错误处理
+fn demonstrate_custom_errors() {
+    println!("\n🎯 4. 自定义错误处理");
+    
+    let test_cases = vec![
+        ("张三", 20, 85.0),
+        ("李四", 150, 90.0),  // 年龄错误
+        ("王五", 22, 105.0),  // 成绩错误
+        ("赵六", 19, 78.5),
+    ];
+    
+    println!("创建学生:");
+    for (name, age, grade) in test_cases {
+        match Student::new(name.to_string(), age, grade) {
+            Ok(student) => println!("  ✓ 成功: {:?}", student),
+            Err(e) => println!("  ✗ 失败: {}", e),
+        }
+    }
+    
+    // 查找学生
+    let students = vec![
+        Student::new("小明".to_string(), 20, 85.0).unwrap(),
+        Student::new("小红".to_string(), 19, 92.0).unwrap(),
+    ];
+    
+    println!("\n查找学生:");
+    match find_student(&students, "小明") {
+        Ok(student) => println!("  找到: {:?}", student),
+        Err(e) => println!("  错误: {}", e),
+    }
+    
+    match find_student(&students, "小刚") {
+        Ok(student) => println!("  找到: {:?}", student),
+        Err(e) => println!("  错误: {}", e),
+    }
+}
+
+fn find_student(students: &[Student], name: &str) -> StudentResult<&Student> {
+    students.iter()
+        .find(|s| s.name == name)
+        .ok_or_else(|| StudentError::NotFound(format!("学生 '{}' 不存在", name)))
+}
+
+/// 演示错误处理最佳实践
+fn demonstrate_best_practices() {
+    println!("\n⭐ 5. 错误处理最佳实践");
+    
+    // 使用unwrap_or提供默认值
+    let input = "abc";
+    let number = input.parse::<i32>().unwrap_or(0);
+    println!("解析 '{}' 结果: {} (默认值)", input, number);
+    
+    // 使用unwrap_or_else提供计算的默认值
+    let number2 = input.parse::<i32>().unwrap_or_else(|_| {
+        println!("  解析失败，使用默认值");
+        -1
+    });
+    println!("解析结果: {}", number2);
+    
+    // 使用map转换成功值
+    let result = "42".parse::<i32>()
+        .map(|n| n * 2)
+        .unwrap_or(0);
+    println!("解析并翻倍: {}", result);
+    
+    // 使用and_then链式操作
+    let result2 = "10".parse::<i32>()
+        .and_then(|n| safe_divide(n, 2).map_err(|e| e.parse().unwrap_or_default()))
+        .unwrap_or(0);
+    println!("解析并除以2: {}", result2);
+    
+    // 错误日志记录
+    if let Err(e) = risky_operation() {
+        eprintln!("操作失败: {}", e);
+        println!("已记录错误到stderr");
+    }
+}
+
+fn risky_operation() -> Result<(), String> {
+    // 模拟可能失败的操作
+    Err("模拟的错误".to_string())
 }
