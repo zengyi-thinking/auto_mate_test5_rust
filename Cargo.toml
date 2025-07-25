@@ -1,0 +1,8 @@
+[package]
+name = "rust_learning_journey"
+version = "0.1.0"
+edition = "2021"
+authors = ["Your Name <your.email@example.com>"]
+description = "循序渐进的Rust学习项目"
+
+[dependencies]
