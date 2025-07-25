@@ -1,156 +1,228 @@
-//! Rust学习之旅 - 第5步：引用和借用
+//! Rust学习之旅 - 第6步：结构体
 //! 
 //! 学习内容：
-//! - 不可变引用
-//! - 可变引用
-//! - 借用规则
-//! - 悬垂引用
+//! - 结构体定义和实例化
+//! - 方法和关联函数
+//! - 结构体更新语法
+//! - 元组结构体和单元结构体
+
+// 定义学生结构体
+#[derive(Debug)]
+struct Student {
+    name: String,
+    age: u8,
+    grade: f64,
+    is_active: bool,
+}
+
+// 定义课程结构体
+#[derive(Debug)]
+struct Course {
+    name: String,
+    credits: u8,
+    instructor: String,
+}
+
+// 元组结构体
+#[derive(Debug)]
+struct Point(i32, i32, i32);
+
+// 单元结构体
+#[derive(Debug)]
+struct Unit;
 
 fn main() {
-    println!("🦀 Rust学习之旅 - 第5步：引用和借用");
+    println!("🦀 Rust学习之旅 - 第6步：结构体");
     println!("=".repeat(50));
     
-    // 1. 不可变引用
-    demonstrate_immutable_references();
+    // 1. 结构体基础
+    demonstrate_struct_basics();
     
-    // 2. 可变引用
-    demonstrate_mutable_references();
+    // 2. 方法和关联函数
+    demonstrate_methods();
     
-    // 3. 借用规则
-    demonstrate_borrowing_rules();
+    // 3. 结构体更新语法
+    demonstrate_struct_update();
     
-    // 4. 字符串切片
-    demonstrate_string_slices();
+    // 4. 特殊结构体类型
+    demonstrate_special_structs();
 }
 
-/// 演示不可变引用
-fn demonstrate_immutable_references() {
-    println!("\n👀 1. 不可变引用");
+/// 演示结构体基础用法
+fn demonstrate_struct_basics() {
+    println!("\n🏗️ 1. 结构体基础");
     
-    let message = String::from("Hello, Rust!");
-    let len = calculate_length(&message);  // 传递引用，不转移所有权
+    // 创建结构体实例
+    let student1 = Student {
+        name: String::from("张三"),
+        age: 20,
+        grade: 85.5,
+        is_active: true,
+    };
     
-    println!("字符串 '{}' 的长度是 {}", message, len);
-    println!("原始字符串仍然可用: {}", message);
+    println!("学生信息: {:?}", student1);
+    println!("姓名: {}", student1.name);
+    println!("年龄: {}", student1.age);
+    println!("成绩: {:.1}", student1.grade);
     
-    // 多个不可变引用是允许的
-    let ref1 = &message;
-    let ref2 = &message;
-    let ref3 = &message;
+    // 可变结构体
+    let mut student2 = Student {
+        name: String::from("李四"),
+        age: 19,
+        grade: 78.0,
+        is_active: false,
+    };
     
-    println!("多个不可变引用:");
-    println!("  ref1: {}", ref1);
-    println!("  ref2: {}", ref2);
-    println!("  ref3: {}", ref3);
+    println!("\n修改前: {:?}", student2);
+    student2.grade = 82.5;
+    student2.is_active = true;
+    println!("修改后: {:?}", student2);
+    
+    // 使用函数创建结构体
+    let student3 = create_student(String::from("王五"), 21, 90.0);
+    println!("通过函数创建: {:?}", student3);
 }
 
-/// 计算字符串长度（使用引用）
-fn calculate_length(s: &String) -> usize {
-    s.len()
-} // s离开作用域，但因为它不拥有所指向的值，所以什么也不会发生
-
-/// 演示可变引用
-fn demonstrate_mutable_references() {
-    println!("\n✏️ 2. 可变引用");
-    
-    let mut text = String::from("Hello");
-    println!("修改前: {}", text);
-    
-    // 创建可变引用并修改
-    append_world(&mut text);
-    println!("修改后: {}", text);
-    
-    // 可变引用的作用域
-    {
-        let mutable_ref = &mut text;
-        mutable_ref.push_str("!!!");
-        println!("在作用域内修改: {}", mutable_ref);
-    } // mutable_ref 在这里离开作用域
-    
-    // 现在可以再次使用text
-    println!("最终结果: {}", text);
+/// 创建学生的辅助函数
+fn create_student(name: String, age: u8, grade: f64) -> Student {
+    Student {
+        name,  // 字段初始化简写
+        age,
+        grade,
+        is_active: true,
+    }
 }
 
-/// 向字符串追加内容
-fn append_world(s: &mut String) {
-    s.push_str(", World");
-}
-
-/// 演示借用规则
-fn demonstrate_borrowing_rules() {
-    println!("\n📏 3. 借用规则");
-    
-    let mut data = String::from("数据");
-    
-    // 规则1: 可以有多个不可变引用
-    println!("规则1: 多个不可变引用");
-    let r1 = &data;
-    let r2 = &data;
-    println!("  r1: {}, r2: {}", r1, r2);
-    // r1 和 r2 在这里不再使用
-    
-    // 规则2: 只能有一个可变引用
-    println!("规则2: 只能有一个可变引用");
-    let r3 = &mut data;
-    r3.push_str("修改");
-    println!("  r3: {}", r3);
-    // r3 在这里不再使用
-    
-    // 规则3: 不能同时有可变和不可变引用
-    println!("规则3: 不能同时有可变和不可变引用");
-    let r4 = &data;  // 不可变引用
-    println!("  r4: {}", r4);
-    // 在r4使用完之后，才能创建可变引用
-    
-    let r5 = &mut data;  // 可变引用
-    r5.push_str("!");
-    println!("  r5: {}", r5);
-    
-    println!("最终数据: {}", data);
-}
-
-/// 演示字符串切片
-fn demonstrate_string_slices() {
-    println!("\n🔪 4. 字符串切片");
-    
-    let sentence = String::from("Hello Rust Programming");
-    
-    // 字符串切片
-    let hello = &sentence[0..5];
-    let rust = &sentence[6..10];
-    let programming = &sentence[11..];
-    
-    println!("原句: {}", sentence);
-    println!("切片:");
-    println!("  hello: {}", hello);
-    println!("  rust: {}", rust);
-    println!("  programming: {}", programming);
-    
-    // 获取第一个单词
-    let first_word = get_first_word(&sentence);
-    println!("第一个单词: {}", first_word);
-    
-    // 字符串字面量就是切片
-    let literal = "这是字符串字面量";  // 类型是 &str
-    let first_word_literal = get_first_word(literal);
-    println!("字面量的第一个词: {}", first_word_literal);
-    
-    // 数组切片
-    let numbers = [1, 2, 3, 4, 5, 6];
-    let slice = &numbers[1..4];
-    println!("数组: {:?}", numbers);
-    println!("切片 [1..4]: {:?}", slice);
-}
-
-/// 获取字符串的第一个单词
-fn get_first_word(s: &str) -> &str {
-    let bytes = s.as_bytes();
-    
-    for (i, &item) in bytes.iter().enumerate() {
-        if item == b' ' {
-            return &s[0..i];
+/// 演示方法和关联函数
+impl Student {
+    // 关联函数（类似静态方法）
+    fn new(name: String, age: u8) -> Student {
+        Student {
+            name,
+            age,
+            grade: 0.0,
+            is_active: true,
         }
     }
     
-    &s[..]  // 如果没有空格，返回整个字符串
+    // 方法（需要self参数）
+    fn display_info(&self) {
+        println!("学生: {}, 年龄: {}, 成绩: {:.1}", 
+                 self.name, self.age, self.grade);
+    }
+    
+    fn is_passing(&self) -> bool {
+        self.grade >= 60.0
+    }
+    
+    fn update_grade(&mut self, new_grade: f64) {
+        self.grade = new_grade;
+        println!("{} 的成绩更新为: {:.1}", self.name, self.grade);
+    }
+    
+    fn get_grade_level(&self) -> &str {
+        match self.grade {
+            90.0..=100.0 => "优秀",
+            80.0..=89.9 => "良好",
+            70.0..=79.9 => "中等",
+            60.0..=69.9 => "及格",
+            _ => "不及格",
+        }
+    }
+}
+
+fn demonstrate_methods() {
+    println!("\n🔧 2. 方法和关联函数");
+    
+    // 使用关联函数创建实例
+    let mut student = Student::new(String::from("赵六"), 22);
+    student.display_info();
+    
+    // 调用方法
+    println!("是否及格: {}", student.is_passing());
+    
+    // 修改数据
+    student.update_grade(87.5);
+    student.display_info();
+    println!("等级: {}", student.get_grade_level());
+    println!("现在是否及格: {}", student.is_passing());
+}
+
+/// 演示结构体更新语法
+fn demonstrate_struct_update() {
+    println!("\n🔄 3. 结构体更新语法");
+    
+    let student1 = Student {
+        name: String::from("原学生"),
+        age: 20,
+        grade: 85.0,
+        is_active: true,
+    };
+    
+    println!("原学生: {:?}", student1);
+    
+    // 使用结构体更新语法创建新实例
+    let student2 = Student {
+        name: String::from("新学生"),
+        grade: 92.0,
+        ..student1  // 其余字段从student1复制
+    };
+    
+    println!("新学生: {:?}", student2);
+    // 注意：student1的name被移动了，但age和is_active被复制了
+    // println!("{:?}", student1); // 这行会编译错误
+    
+    // 创建课程实例
+    let course1 = Course {
+        name: String::from("Rust编程"),
+        credits: 3,
+        instructor: String::from("张教授"),
+    };
+    
+    let course2 = Course {
+        instructor: String::from("李教授"),
+        ..course1
+    };
+    
+    println!("课程1: {:?}", course2);
+}
+
+/// 演示特殊结构体类型
+fn demonstrate_special_structs() {
+    println!("\n🎯 4. 特殊结构体类型");
+    
+    // 元组结构体
+    let origin = Point(0, 0, 0);
+    let point1 = Point(1, 2, 3);
+    
+    println!("原点: {:?}", origin);
+    println!("点1: {:?}", point1);
+    println!("点1的坐标: ({}, {}, {})", point1.0, point1.1, point1.2);
+    
+    // 单元结构体
+    let unit = Unit;
+    println!("单元结构体: {:?}", unit);
+    
+    // 计算两点距离
+    let distance = calculate_distance(&origin, &point1);
+    println!("两点距离: {:.2}", distance);
+}
+
+/// 为Point实现方法
+impl Point {
+    fn new(x: i32, y: i32, z: i32) -> Point {
+        Point(x, y, z)
+    }
+    
+    fn distance_from_origin(&self) -> f64 {
+        ((self.0.pow(2) + self.1.pow(2) + self.2.pow(2)) as f64).sqrt()
+    }
+}
+
+/// 计算两点间距离
+fn calculate_distance(p1: &Point, p2: &Point) -> f64 {
+    let dx = (p2.0 - p1.0) as f64;
+    let dy = (p2.1 - p1.1) as f64;
+    let dz = (p2.2 - p1.2) as f64;
+    (dx.powi(2) + dy.powi(2) + dz.powi(2)).sqrt()
 }
